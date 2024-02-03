@@ -2,7 +2,7 @@
 
 #define STEP 250 /* ms */
 #define NAME "marek"
-#define MORSE_SOUND 0x01
+#define SOUNDS {0x01, 0x02, 0x03, 0x05, 0x02, 0x01}
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -88,11 +88,13 @@ static void dark() {
 }
 
 static const char name[] PROGMEM = NAME;
+static const uint8_t sounds[] PROGMEM = SOUNDS;
 
 static inline void on_step() {
   static uint8_t name_index = 0;
   static uint8_t signal_counter = 0;
   static uint8_t signal_index = 0;
+  static uint8_t sound_index = 0;
   static uint8_t morse_signals[12] = {0};
 
   uint8_t signal;
@@ -109,7 +111,11 @@ static inline void on_step() {
 
   if (signal & STATE_SIGNL) {
     light();
-    sound_on(MORSE_SOUND);
+    uint8_t sound = pgm_read_byte(&sounds[sound_index]);
+    if (sound_index++ >= sizeof(sound)) {
+      sound_index = 0;
+    }
+    sound_on(sound);
   } else if (signal & STATE_PAUSE) {
     dark();
     sound_off();
