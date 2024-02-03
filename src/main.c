@@ -1,8 +1,9 @@
 // CONFIG
 
 #define STEP 250 /* ms */
-#define NAME "marek"
-#define SOUNDS {0x01, 0x02, 0x03, 0x05, 0x02, 0x01}
+#define NAME "sos"
+// from 0x00 to 0x60
+#define SOUNDS {0x01, 0x05, 0x20, 0x02, 0x03}
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -32,7 +33,7 @@ static inline void setup() {
 
   // Timer with sending signal to PB0.
   TCCR0A = (1 << COM0A0) | (1 << WGM01);
-  TCCR0B = (1 << FOC0A) | (1 << CS02) | (1 << CS00);
+  TCCR0B = (1 << FOC0A) | (1 << CS01);
   TIMSK0 = 0;
 
   // ADC1 on the port PB2 with interrupt.
@@ -69,7 +70,7 @@ static inline void sound_off() {
 }
 
 static inline void sound_on(uint8_t sound) {
-  TCCR0B = (1 << FOC0A) | (1 << CS02) | (1 << CS00);
+  TCCR0B = (1 << FOC0A) | (1 << CS01);
   OCR0A = sound;
 }
 
@@ -104,7 +105,7 @@ static inline void on_step() {
 
     signal_index = 0;
     signal_counter = 0;
-    if (name_index++ >= sizeof(name)) {
+    if (++name_index >= sizeof(name)) {
       name_index = 0;
     }
   }
@@ -112,9 +113,6 @@ static inline void on_step() {
   if (signal & STATE_SIGNL) {
     light();
     uint8_t sound = pgm_read_byte(&sounds[sound_index]);
-    if (sound_index++ >= sizeof(sound)) {
-      sound_index = 0;
-    }
     sound_on(sound);
   } else if (signal & STATE_PAUSE) {
     dark();
@@ -125,6 +123,11 @@ static inline void on_step() {
   if (signal_counter++ >= cnt) {
     signal_counter = 0;
     signal_index++;
+    if (signal & STATE_SIGNL) {
+      if (++sound_index >= sizeof(sounds)) {
+        sound_index = 0;
+      }
+    }
   }
 }
 
