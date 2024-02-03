@@ -12,7 +12,9 @@ LD=avr-ld
 OBJCOPY=avr-objcopy
 SIZE=avr-size
 AVRDUDE=avrdude
-CFLAGS=-std=c99 -Wall -g -Os -flto -mmcu=${MCU} -DF_CPU=${F_CPU} -Iinclude
+CFLAGS =-std=c99 -Wall -g -Os -Iinclude
+CFLAGS+=-flto -fno-reorder-blocks
+CFLAGS+=-mmcu=${MCU} -DF_CPU=${F_CPU}
 TARGET=main
 
 SRCS = src/main.c src/morse.c

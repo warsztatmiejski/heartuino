@@ -1,62 +1,134 @@
 #include "morse.h"
-// #include <avr/pgmspace.h>
-// const uint8_t NEXT_CHAR[26] PROGMEM = { 0 };
-// const uint8_t NEXT_SIGNAL[26] PROGMEM = { 0 };
+#ifdef __AVR__
+  #include <avr/pgmspace.h>
+  #define _MORSE_MEMORY PROGMEM
+  #define _MORSE_SIZE(state) pgm_read_byte(&SIZE[state])
+  #define _MORSE_LOAD(state, signal) { \
+    signal = pgm_read_byte(&NEXT_SIGNAL[state]); \
+    state = pgm_read_byte(&NEXT_STATE[state]); \
+  }
+#else
+  #define _MORSE_MEMORY
+  #define _MORSE_SIZE(state) SIZE[state]
+  #define _MORSE_LOAD(state, signal) { \
+    signal = NEXT_SIGNAL[state]; \
+    state = NEXT_STATE[state]; \
+  }
+#endif
+
+#define DOT        (STATE_SIGNL | 1)
+#define DASH       (STATE_SIGNL | 3)
+#define GAP        (STATE_PAUSE | 1)
+#define SHORT_GAP  (STATE_PAUSE | 3)
+#define MEDIUM_GAP (STATE_PAUSE | 7)
+
+const uint8_t NEXT_STATE[26] _MORSE_MEMORY = {
+  /*a*/ 'e' - 'a',
+  /*b*/ 'd' - 'a',
+  /*c*/ 'k' - 'a',
+  /*d*/ 'n' - 'a',
+  /*e*/ 0,
+  /*f*/ 'u' - 'a',
+  /*g*/ 'm' - 'a',
+  /*h*/ 's' - 'a',
+  /*i*/ 'e' - 'a',
+  /*j*/ 'w' - 'a',
+  /*k*/ 'n' - 'a',
+  /*l*/ 'r' - 'a',
+  /*m*/ 't' - 'a',
+  /*n*/ 't' - 'a',
+  /*o*/ 'm' - 'a',
+  /*p*/ 'w' - 'a',
+  /*q*/ 'g' - 'a',
+  /*r*/ 'a' - 'a',
+  /*s*/ 'i' - 'a',
+  /*t*/ 0,
+  /*u*/ 'i' - 'a',
+  /*v*/ 's' - 'a',
+  /*w*/ 'a' - 'a',
+  /*x*/ 'd' - 'a',
+  /*y*/ 'k' - 'a',
+  /*z*/ 'g' - 'a',
+};
+
+const uint8_t NEXT_SIGNAL[26] _MORSE_MEMORY = {
+  /*a*/ DASH,
+  /*b*/ DOT,
+  /*c*/ DOT,
+  /*d*/ DOT,
+  /*e*/ DOT,
+  /*f*/ DOT,
+  /*g*/ DOT,
+  /*h*/ DOT,
+  /*i*/ DOT,
+  /*j*/ DASH,
+  /*k*/ DASH,
+  /*l*/ DOT,
+  /*m*/ DASH,
+  /*n*/ DOT,
+  /*o*/ DASH,
+  /*p*/ DOT,
+  /*q*/ DASH,
+  /*r*/ DOT,
+  /*s*/ DOT,
+  /*t*/ DASH,
+  /*u*/ DASH,
+  /*v*/ DASH,
+  /*w*/ DASH,
+  /*x*/ DASH,
+  /*y*/ DASH,
+  /*z*/ DOT,
+};
+
+const uint8_t SIZE[26] _MORSE_MEMORY = {
+  /*a*/ 2 * 2 - 1,
+  /*b*/ 4 * 2 - 1,
+  /*c*/ 4 * 2 - 1,
+  /*d*/ 3 * 2 - 1,
+  /*e*/ 1 * 2 - 1,
+  /*f*/ 4 * 2 - 1,
+  /*g*/ 3 * 2 - 1,
+  /*h*/ 4 * 2 - 1,
+  /*i*/ 2 * 2 - 1,
+  /*j*/ 3 * 2 - 1,
+  /*k*/ 3 * 2 - 1,
+  /*l*/ 4 * 2 - 1,
+  /*m*/ 2 * 2 - 1,
+  /*n*/ 2 * 2 - 1,
+  /*o*/ 3 * 2 - 1,
+  /*p*/ 4 * 2 - 1,
+  /*q*/ 4 * 2 - 1,
+  /*r*/ 3 * 2 - 1,
+  /*s*/ 3 * 2 - 1,
+  /*t*/ 1 * 2 - 1,
+  /*u*/ 3 * 2 - 1,
+  /*v*/ 3 * 2 - 1,
+  /*w*/ 4 * 2 - 1,
+  /*x*/ 4 * 2 - 1,
+  /*y*/ 4 * 2 - 1,
+  /*z*/ 4 * 2 - 1,
+};
 
 bool decode_morse_char(char c, uint8_t * morse_signals) {
-  uint8_t index;
-  uint8_t reverse_index;
-  uint8_t reversed_signals[8];
-
   if (c == '\0' || c == ' ') {
     morse_signals[0] = MEDIUM_GAP;
     morse_signals[1] = 0;
     return true;
   }
 
-  for(index = 0; index < 8;) {
-    uint8_t signal;
-    switch (c) {
-      case 't': c = EOT; signal = DASH; break;
-      case 'e': c = EOT; signal = DOT; break;
-      case 'm': c = 't'; signal = DASH; break;
-      case 'n': c = 't'; signal = DOT; break;
-      case 'a': c = 'e'; signal = DASH; break;
-      case 'i': c = 'e'; signal = DOT; break;
-      case 'o': c = 'm'; signal = DASH; break;
-      case 'g': c = 'm'; signal = DOT; break;
-      case 'k': c = 'n'; signal = DASH; break;
-      case 'd': c = 'n'; signal = DOT; break;
-      case 'w': c = 'a'; signal = DASH; break;
-      case 'r': c = 'a'; signal = DOT; break;
-      case 'u': c = 'i'; signal = DASH; break;
-      case 's': c = 'i'; signal = DOT; break;
-      case 'q': c = 'g'; signal = DASH; break;
-      case 'z': c = 'g'; signal = DOT; break;
-      case 'y': c = 'k'; signal = DASH; break;
-      case 'c': c = 'k'; signal = DOT; break;
-      case 'x': c = 'd'; signal = DASH; break;
-      case 'b': c = 'd'; signal = DOT; break;
-      case 'j': c = 'w'; signal = DASH; break;
-      case 'p': c = 'w'; signal = DOT; break;
-      case 'l': c = 'r'; signal = DOT; break;
-      case 'f': c = 'u'; signal = DOT; break;
-      case 'v': c = 's'; signal = DASH; break;
-      case 'h': c = 's'; signal = DOT; break;
-      default: return false;
-    }
-    if (c == EOT) {
-      reversed_signals[index++] = signal;
-      break;
-    } else {
-      reversed_signals[index++] = GAP;
-      reversed_signals[index++] = signal;
+  uint8_t state = c - 'a';
+  int8_t size = _MORSE_SIZE(state);
+  int8_t index = size;
+  int8_t signal;
+
+  while(index > 0) {
+    _MORSE_LOAD(state, signal);
+    morse_signals[--index] = signal;
+    if (index > 1) {
+      morse_signals[--index] = GAP;
     }
   }
-  for(reverse_index = 0; reverse_index <= index; reverse_index++) {
-    morse_signals[reverse_index] = reversed_signals[index - reverse_index];
-  }
-  morse_signals[reverse_index++] = SHORT_GAP;
-  morse_signals[reverse_index++] = 0;
+  morse_signals[size] = SHORT_GAP;
+  morse_signals[size + 1] = 0;
   return true;
 }

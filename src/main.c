@@ -1,3 +1,10 @@
+// CONFIG
+#include <avr/pgmspace.h>
+
+#define STEP 250 /* ms */
+const char NAME[] PROGMEM = "sos";
+
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
@@ -5,9 +12,12 @@
 
 #include "morse.h"
 
+#define TICK 16
+#define STEP_IN_TICKS (STEP / TICK)
+
 static volatile bool _global_clicked;
 static volatile bool _global_lighted;
-static volatile uint16_t _global_time;
+static volatile uint8_t _global_time;
 
 static inline void setup() {
   // Setup globals
@@ -23,7 +33,7 @@ static inline void setup() {
   // Timer with sending signal to PB0.
   TCCR0A = (1 << COM0A0) | (1 << WGM01);
   TCCR0B = (1 << FOC0A) | (1 << CS02); // clk / 1024.
-  TIMSK0 = (1 << OCIE0A);
+  TIMSK0 = 0;
   OCR0A = 127;
 
   // ADC1 on the port PB2 with interrupt.
@@ -36,6 +46,9 @@ static inline void setup() {
   // Pin PB1 interrupt.
   MCUCR = (1 << ISC01); // 1 -> 0 triggers.
   GIMSK = (1 << INT0); // Interrupt on.
+
+  // Watchdog (used as timer)
+  WDTCR = (1 << WDTIE);
 }
 
 ISR(INT0_vect) {
@@ -44,12 +57,13 @@ ISR(INT0_vect) {
 }
 
 ISR(ADC_vect) {
-  uint16_t level = (ADCH << 8) | ADCL;
+  uint16_t level = ((uint16_t)ADCH << 8) | (uint16_t)ADCL;
   _global_lighted = level > 800;
 }
 
-ISR(TIM0_COMPA_vect) {
-  _global_time += OCR0A;
+ISR(WDT_vect) {
+  // 1 tick ~= 16ms
+  _global_time++;
 }
 
 static void light() {
@@ -66,38 +80,37 @@ static void dark() {
   PORTB = (1 << PB0) | (1 << PB1) | (1 << PB3) | (1 << PB4);
 }
 
-const char * name = "marek";
+static inline void on_step() {
+  static uint8_t name_index = 0;
+  static uint8_t signal_counter = 0;
+  static uint8_t signal_index = 0;
+  static uint8_t morse_signals[12] = {0};
+  static uint8_t sound = 0;
 
-static uint8_t name_index = 0;
-static uint8_t morse_index = 0;
-static uint8_t signal_index = 0;
-static uint8_t morse_signals[12] = {0};
-static uint8_t sound = 0;
-
-static inline void on_tick() {
   sound += 8;
+  OCR0A = sound;
 
-  uint8_t signal = morse_signals[morse_index];
+  uint8_t signal;
+  while (!(signal = morse_signals[signal_index])) {
+    uint8_t character = pgm_read_byte(&NAME[name_index]);
+    decode_morse_char(character, morse_signals);
 
-  if (!signal) {
-    morse_index = 0;
     signal_index = 0;
-    if (++name_index >= sizeof(name)) {
+    signal_counter = 0;
+    if (name_index++ >= sizeof(NAME)) {
       name_index = 0;
     }
-    decode_morse_char(name[name_index], morse_signals);
-    return;
   }
 
-  uint8_t cnt = signal & CNT_MASK;
   if (signal & STATE_SIGNL) {
     light();
   } else if (signal & STATE_PAUSE) {
     dark();
   }
 
-  if (++morse_index >= cnt) {
-    morse_index = 0;
+  uint8_t cnt = signal & CNT_MASK;
+  if (signal_counter++ >= cnt) {
+    signal_counter = 0;
     signal_index++;
   }
 }
@@ -108,9 +121,9 @@ int main() {
 
   for(;;) {
     cli();
-    if (_global_time > F_CPU / (1024 * 4)) {
+    if (_global_time > STEP_IN_TICKS) {
       _global_time = 0;
-      on_tick();
+      on_step();
     }
 
     sei();
