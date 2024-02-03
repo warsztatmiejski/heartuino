@@ -1,13 +1,13 @@
 // CONFIG
-#include <avr/pgmspace.h>
 
 #define STEP 250 /* ms */
-const char NAME[] PROGMEM = "sos";
-
+#define NAME "marek"
+#define MORSE_SOUND 0x01
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
+#include <avr/pgmspace.h>
 #include <util/delay.h>
 
 #include "morse.h"
@@ -16,14 +16,14 @@ const char NAME[] PROGMEM = "sos";
 #define STEP_IN_TICKS (STEP / TICK)
 
 static volatile bool _global_clicked;
-static volatile bool _global_lighted;
+static volatile uint8_t _global_sunny;
 static volatile uint8_t _global_time;
 
 static inline void setup() {
   // Setup globals
   _global_time = 0;
+  _global_sunny = 0;
   _global_clicked = false;
-  _global_lighted = false;
 
   // Output: 0, 3, 4; each initially as high.
   // Input: 1, 2; 1 with pull-up.
@@ -32,12 +32,11 @@ static inline void setup() {
 
   // Timer with sending signal to PB0.
   TCCR0A = (1 << COM0A0) | (1 << WGM01);
-  TCCR0B = (1 << FOC0A) | (1 << CS02); // clk / 1024.
+  TCCR0B = (1 << FOC0A) | (1 << CS02) | (1 << CS00);
   TIMSK0 = 0;
-  OCR0A = 127;
 
   // ADC1 on the port PB2 with interrupt.
-  ADMUX = (1 << MUX0);
+  ADMUX = (1 << ADLAR) | (1 << MUX0);
   ADCSRA = (1 << ADEN) | (1 << ADSC) | (1 << ADATE) |
            (1 << ADIE) | (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2);
   ADCSRB = 0;
@@ -57,8 +56,7 @@ ISR(INT0_vect) {
 }
 
 ISR(ADC_vect) {
-  uint16_t level = ((uint16_t)ADCH << 8) | (uint16_t)ADCL;
-  _global_lighted = level > 800;
+  _global_sunny = ADCH;
 }
 
 ISR(WDT_vect) {
@@ -66,8 +64,17 @@ ISR(WDT_vect) {
   _global_time++;
 }
 
+static inline void sound_off() {
+  TCCR0B = (1 << FOC0A);
+}
+
+static inline void sound_on(uint8_t sound) {
+  TCCR0B = (1 << FOC0A) | (1 << CS02) | (1 << CS00);
+  OCR0A = sound;
+}
+
 static void light() {
-  if (_global_lighted) {
+  if (_global_sunny < 200) {
     PORTB = (1 << PB1);
   } else if (_global_clicked) {
     PORTB = (1 << PB3) | (1 << PB1);
@@ -80,32 +87,32 @@ static void dark() {
   PORTB = (1 << PB0) | (1 << PB1) | (1 << PB3) | (1 << PB4);
 }
 
+static const char name[] PROGMEM = NAME;
+
 static inline void on_step() {
   static uint8_t name_index = 0;
   static uint8_t signal_counter = 0;
   static uint8_t signal_index = 0;
   static uint8_t morse_signals[12] = {0};
-  static uint8_t sound = 0;
-
-  sound += 8;
-  OCR0A = sound;
 
   uint8_t signal;
   while (!(signal = morse_signals[signal_index])) {
-    uint8_t character = pgm_read_byte(&NAME[name_index]);
+    uint8_t character = pgm_read_byte(&name[name_index]);
     decode_morse_char(character, morse_signals);
 
     signal_index = 0;
     signal_counter = 0;
-    if (name_index++ >= sizeof(NAME)) {
+    if (name_index++ >= sizeof(name)) {
       name_index = 0;
     }
   }
 
   if (signal & STATE_SIGNL) {
     light();
+    sound_on(MORSE_SOUND);
   } else if (signal & STATE_PAUSE) {
     dark();
+    sound_off();
   }
 
   uint8_t cnt = signal & CNT_MASK;
