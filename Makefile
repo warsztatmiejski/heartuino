@@ -3,6 +3,10 @@
 # https://github.com/lpodkalicki/attiny-onewire-library/blob/master/examples/attiny13/Makefile
 # --
 
+STEP=250
+NAME=sos
+MUSIC=afbccdeaz
+
 MCU=attiny13
 FUSE_L=0x3B
 FUSE_H=0xFF
@@ -15,6 +19,7 @@ AVRDUDE=avrdude
 CFLAGS =-std=c99 -Wall -g -Os -Iinclude
 CFLAGS+=-flto -fno-reorder-blocks
 CFLAGS+=-mmcu=${MCU} -DF_CPU=${F_CPU}
+CFLAGS+=-DNAME=${NAME} -DSTEP=${STEP} -DMUSIC=${MUSIC}
 TARGET=main
 
 SRCS = src/main.c src/morse.c

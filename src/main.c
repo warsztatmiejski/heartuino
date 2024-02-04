@@ -1,9 +1,7 @@
 // CONFIG
 
-#define STEP 250 /* ms */
-#define NAME "sos"
-// from 0x00 to 0x60
-#define SOUNDS {0x01, 0x05, 0x20, 0x02, 0x03}
+#define _STR(s) #s
+#define _XSTR(s) _STR(s)
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -88,8 +86,8 @@ static void dark() {
   PORTB = (1 << PB0) | (1 << PB1) | (1 << PB3) | (1 << PB4);
 }
 
-static const char name[] PROGMEM = NAME;
-static const uint8_t sounds[] PROGMEM = SOUNDS;
+static const char name[] PROGMEM = _XSTR(NAME);
+static const uint8_t music[] PROGMEM = _XSTR(MUSIC);
 
 static inline void on_step() {
   static uint8_t name_index = 0;
@@ -112,8 +110,8 @@ static inline void on_step() {
 
   if (signal & STATE_SIGNL) {
     light();
-    uint8_t sound = pgm_read_byte(&sounds[sound_index]);
-    sound_on(sound);
+    uint8_t note = pgm_read_byte(&music[sound_index]);
+    sound_on((note - 'a') << 2);
   } else if (signal & STATE_PAUSE) {
     dark();
     sound_off();
@@ -124,7 +122,7 @@ static inline void on_step() {
     signal_counter = 0;
     signal_index++;
     if (signal & STATE_SIGNL) {
-      if (++sound_index >= sizeof(sounds)) {
+      if (++sound_index >= sizeof(music) - 1) {
         sound_index = 0;
       }
     }
