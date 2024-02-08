@@ -19,7 +19,7 @@ AVRDUDE=avrdude
 CFLAGS =-std=c99 -Wall -g -Os -Iinclude
 CFLAGS+=-flto -fno-reorder-blocks
 CFLAGS+=-mmcu=${MCU} -DF_CPU=${F_CPU}
-CFLAGS+=-DNAME=${NAME} -DSTEP=${STEP} -DMUSIC=${shell ./to_note.py "${MUSIC}"}
+CFLAGS+=-DNAME=${NAME} -DSTEP=${STEP} -DMUSIC="${shell ./to_note.py "${MUSIC}"}"
 TARGET=main
 
 SRCS = src/main.c src/morse.c

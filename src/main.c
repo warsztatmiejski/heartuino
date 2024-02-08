@@ -87,7 +87,7 @@ static void dark() {
 }
 
 static const char name[] PROGMEM = _XSTR(NAME);
-static const uint8_t music[] PROGMEM = _XSTR(MUSIC);
+static const uint8_t music[] PROGMEM = MUSIC;
 
 static inline void on_step() {
   static uint8_t name_index = 0;
@@ -111,7 +111,7 @@ static inline void on_step() {
   if (signal & STATE_SIGNL) {
     light();
     uint8_t note = pgm_read_byte(&music[sound_index]);
-    sound_on((note - 'a') << 2);
+    sound_on(note);
   } else if (signal & STATE_PAUSE) {
     dark();
     sound_off();
@@ -122,7 +122,7 @@ static inline void on_step() {
     signal_counter = 0;
     signal_index++;
     if (signal & STATE_SIGNL) {
-      if (++sound_index >= sizeof(music) - 1) {
+      if (++sound_index >= sizeof(music)) {
         sound_index = 0;
       }
     }
