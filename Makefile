@@ -5,7 +5,7 @@
 
 STEP=250
 NAME=sos
-MUSIC=afbccdeaz
+MUSIC=G4 G4 G4 A4 A4 A4 B4 G3 G3 G3 A3 A3 A3 B3
 
 MCU=attiny13
 FUSE_L=0x3B
@@ -19,7 +19,7 @@ AVRDUDE=avrdude
 CFLAGS =-std=c99 -Wall -g -Os -Iinclude
 CFLAGS+=-flto -fno-reorder-blocks
 CFLAGS+=-mmcu=${MCU} -DF_CPU=${F_CPU}
-CFLAGS+=-DNAME=${NAME} -DSTEP=${STEP} -DMUSIC=${MUSIC}
+CFLAGS+=-DNAME=${NAME} -DSTEP=${STEP} -DMUSIC=${shell ./to_note.py "${MUSIC}"}
 TARGET=main
 
 SRCS = src/main.c src/morse.c
