@@ -6,6 +6,7 @@
 STEP=250
 NAME=sos
 MUSIC=G4 G4 G4 A4 A4 A4 B4 G3 G3 G3 A3 A3 A3 B3
+NAME_LOWERCASE=${shell echo ${NAME} | tr '[:upper:]' '[:lower:]'}
 
 MCU=attiny13
 FUSE_L=0x3B
@@ -19,7 +20,7 @@ AVRDUDE=avrdude
 MAIN_CFLAGS=-std=c99 -Wall -g -Os -Iinclude -flto -fno-reorder-blocks
 CFLAGS =$(MAIN_CFLAGS)
 CFLAGS+=-mmcu=${MCU} -DF_CPU=${F_CPU}
-CFLAGS+=-DNAME=${NAME} -DSTEP=${STEP} -DMUSIC="${shell ./to_note.py "${MUSIC}"}"
+CFLAGS+=-DNAME=${NAME_LOWERCASE} -DSTEP=${STEP} -DMUSIC="${shell ./to_note.py "${MUSIC}"}"
 CFLAGS_TESTS=$(MAIN_CFLAGS) ${shell pkg-config --cflags --libs check}
 TARGET=main
 
