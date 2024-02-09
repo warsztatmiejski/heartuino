@@ -16,12 +16,6 @@
   }
 #endif
 
-#define DOT        (STATE_SIGNL | 1)
-#define DASH       (STATE_SIGNL | 3)
-#define GAP        (STATE_PAUSE | 1)
-#define SHORT_GAP  (STATE_PAUSE | 3)
-#define MEDIUM_GAP (STATE_PAUSE | 7)
-
 const uint8_t NEXT_STATE[26] _MORSE_MEMORY = {
   /*a*/ 'e' - 'a',
   /*b*/ 'd' - 'a',
@@ -90,7 +84,7 @@ const uint8_t SIZE[26] _MORSE_MEMORY = {
   /*g*/ 3 * 2 - 1,
   /*h*/ 4 * 2 - 1,
   /*i*/ 2 * 2 - 1,
-  /*j*/ 3 * 2 - 1,
+  /*j*/ 4 * 2 - 1,
   /*k*/ 3 * 2 - 1,
   /*l*/ 4 * 2 - 1,
   /*m*/ 2 * 2 - 1,
@@ -102,8 +96,8 @@ const uint8_t SIZE[26] _MORSE_MEMORY = {
   /*s*/ 3 * 2 - 1,
   /*t*/ 1 * 2 - 1,
   /*u*/ 3 * 2 - 1,
-  /*v*/ 3 * 2 - 1,
-  /*w*/ 4 * 2 - 1,
+  /*v*/ 4 * 2 - 1,
+  /*w*/ 3 * 2 - 1,
   /*x*/ 4 * 2 - 1,
   /*y*/ 4 * 2 - 1,
   /*z*/ 4 * 2 - 1,
@@ -117,6 +111,10 @@ bool decode_morse_char(char c, uint8_t * morse_signals) {
   }
 
   uint8_t state = c - 'a';
+  if (state > 'z' - 'a') {
+    morse_signals[0] = 0;
+    return false;
+  }
   int8_t size = _MORSE_SIZE(state);
   int8_t index = size;
   int8_t signal;

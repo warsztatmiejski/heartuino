@@ -16,19 +16,27 @@ LD=avr-ld
 OBJCOPY=avr-objcopy
 SIZE=avr-size
 AVRDUDE=avrdude
-CFLAGS =-std=c99 -Wall -g -Os -Iinclude
-CFLAGS+=-flto -fno-reorder-blocks
+MAIN_CFLAGS=-std=c99 -Wall -g -Os -Iinclude -flto -fno-reorder-blocks
+CFLAGS =$(MAIN_CFLAGS)
 CFLAGS+=-mmcu=${MCU} -DF_CPU=${F_CPU}
 CFLAGS+=-DNAME=${NAME} -DSTEP=${STEP} -DMUSIC="${shell ./to_note.py "${MUSIC}"}"
+CFLAGS_TESTS=$(MAIN_CFLAGS) ${shell pkg-config --cflags --libs check}
 TARGET=main
 
 SRCS = src/main.c src/morse.c
+SRC_TESTS = src/morse.c test/morse.c
+
+.PHONY: all test flash fuse clean
 
 all:
 	${CC} ${CFLAGS} -o ${TARGET}.o ${SRCS}
 	${LD} -o ${TARGET}.elf ${TARGET}.o
 	${OBJCOPY} -j .text -j .data -O ihex ${TARGET}.o ${TARGET}.hex
 	${SIZE} -C --mcu=${MCU} ${TARGET}.elf
+
+test:
+	gcc -o test.o ${SRC_TESTS} ${CFLAGS_TESTS}
+	./test.o
 
 flash:
 	${AVRDUDE} -p ${MCU} -c usbasp -U flash:w:${TARGET}.hex:i -F -P usb
